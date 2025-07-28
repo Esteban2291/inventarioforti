@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar desde Excel{% endblock %}
+{% block page_title %}Importar Activos desde Excel{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">Importar archivo Excel (.xlsx)</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-upload me-1"></i> Importar Archivo
+                    </button>
+                    <a href="{% url 'listado_activos' %}" class="btn btn-secondary ms-2">Cancelar</a>
+                </form>
+
+                <hr class="mt-4">
+                <p class="text-muted small">
+                    El archivo debe tener una estructura de columnas como:<br>
+                    <strong>Comando / Región, Título Abreviado, Detalle Unidad, Modelo Fortinet, Serie Fortinet, Oblea Fortinet, OSPF, IP Admin, Subred, DMZ, WiFi, Grupo LDAP, Admin Unidad, Teléfono, Observaciones, Estado</strong>.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

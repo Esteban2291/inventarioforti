@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block title %}Listado de Activos{% endblock %}
+{% block page_title %}Listado de Activos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Activos Registrados</h6>
+                <a href="{% url 'crear_activo' %}" class="btn btn-success btn-sm">
+                    <i class="bi bi-plus-circle-fill me-1"></i> Añadir Nuevo Activo
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped" id="dataTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Comando / Región</th>
+                                <th>Título Abreviado</th>
+                                <th>Datos Fortinet</th>
+                                <th>Switch(es)</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for activo in activos %}
+                            <tr>
+                                <td>{{ activo.comando_region }}</td>
+                                <td>{{ activo.titulo_abreviado }}</td>
+                                <td>
+                                    <strong>Modelo:</strong> {{ activo.modelo_equipo_fortinet }}<br>
+                                    <strong>Serie:</strong> {{ activo.serie_fortinet }}<br>
+                                    <strong>Oblea:</strong> {{ activo.oblea_fortinet }}<br>
+                                    <strong>OSPF:</strong> {{ activo.ospf }}<br>
+                                    <strong>IP Admin:</strong> {{ activo.ip_admin }}<br>
+                                    <strong>Subred:</strong> {{ activo.direccion_subred }}<br>
+                                    <strong>Red DMZ:</strong> {{ activo.red_dmz }}<br>
+                                    <strong>Red WiFi:</strong> {{ activo.red_wifi }}<br>
+                                    <strong>LDAP:</strong> {{ activo.grupo_admin_ldap }}
+                                </td>
+                                <td>
+                                    {% if activo.switches.exists %}
+                                        <ul class="mb-0 ps-3">
+                                            {% for sw in activo.switches.all %}
+                                                <li>
+                                                    <strong>Modelo:</strong> {{ sw.modelo_equipo }}<br>
+                                                    <strong>Serie:</strong> {{ sw.serie }}<br>
+                                                    <strong>Oblea:</strong> {{ sw.oblea|default:"-" }}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <em>Sin switches</em>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if activo.estado == 'activo' %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% elif activo.estado == 'observacion' %}
+                                        <span class="badge bg-warning text-dark">En observación</span>
+                                    {% elif activo.estado == 'quemado' %}
+                                        <span class="badge bg-danger">Quemado</span>
+                                    {% elif activo.estado == 'baja' %}
+                                        <span class="badge bg-secondary">Dado de baja</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark">Sin estado</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group-vertical" role="group" aria-label="Acciones">
+                                        <a href="{% url 'editar_activo' activo.pk %}" class="btn btn-info btn-sm mb-1" title="Editar">
+                                            <i class="bi bi-pencil-square"></i> Editar
+                                        </a>
+                                        <button type="button" class="btn btn-danger btn-sm mb-1" title="Eliminar"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalEliminar"
+                                                data-url="{% url 'eliminar_activo' activo.pk %}">
+                                            <i class="bi bi-trash-fill"></i> Eliminar
+                                        </button>
+                                        <a href="{% url 'detalle_activo' activo.pk %}" class="btn btn-secondary btn-sm" title="Ver Detalle">
+                                            <i class="bi bi-eye-fill"></i> Ver
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center">No hay activos registrados.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación de Eliminación -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" id="formEliminar">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalEliminarLabel">Confirmar Eliminación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          ¿Estás seguro de que querés eliminar este activo?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Eliminar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalEliminar = document.getElementById('modalEliminar');
+    if (modalEliminar) {
+        modalEliminar.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const url = button.getAttribute('data-url');
+            const form = document.getElementById('formEliminar');
+            if (form && url) {
+                form.action = url;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

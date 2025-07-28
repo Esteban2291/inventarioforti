@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Detalle del Activo{% endblock %}
+{% block page_title %}Detalle del Activo{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Detalle de {{ activo.titulo_abreviado }} - {{ activo.serie_fortinet }}</h6>
+                <a href="{% url 'listado_activos' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+            <div class="card-body">
+
+                <!-- Datos Fortinet -->
+                <h5 class="text-primary">Datos del Equipo Fortinet</h5>
+                <ul class="list-group mb-3">
+                    <li class="list-group-item"><strong>Modelo:</strong> {{ activo.modelo_equipo_fortinet }}</li>
+                    <li class="list-group-item"><strong>Serie:</strong> {{ activo.serie_fortinet }}</li>
+                    <li class="list-group-item"><strong>Oblea:</strong> {{ activo.oblea_fortinet }}</li>
+                    <li class="list-group-item"><strong>OSPF:</strong> {{ activo.ospf }}</li>
+                    <li class="list-group-item"><strong>IP Admin:</strong> {{ activo.ip_admin }}</li>
+                    <li class="list-group-item"><strong>Subred:</strong> {{ activo.direccion_subred }}</li>
+                    <li class="list-group-item"><strong>Red DMZ:</strong> {{ activo.red_dmz }}</li>
+                    <li class="list-group-item"><strong>Red WiFi:</strong> {{ activo.red_wifi }}</li>
+                    <li class="list-group-item"><strong>Grupo Admin LDAP:</strong> {{ activo.grupo_admin_ldap }}</li>
+                    <li class="list-group-item"><strong>Admin Unidad:</strong> {{ activo.apellido_nombre_admin }}</li>
+                </ul>
+
+                <!-- Estado Actual y Formulario de cambio -->
+                <h5 class="text-primary">Estado Actual</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row align-items-end mb-3">
+                        <div class="col-md-6">
+                            {{ estado_form.estado.label_tag }}
+                            {{ estado_form.estado }}
+                        </div>
+                        <div class="col-md-auto">
+                            <button type="submit" class="btn btn-primary btn-sm mt-2">
+                                <i class="bi bi-save"></i> Guardar Estado
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Switches -->
+                <h5 class="text-primary mt-4">Switches Fortinet Asociados</h5>
+                {% if switches %}
+                    <ul class="list-group mb-3">
+                        {% for sw in switches %}
+                            <li class="list-group-item">
+                                <strong>Modelo:</strong> {{ sw.modelo_equipo }} |
+                                <strong>Serie:</strong> {{ sw.serie }} |
+                                <strong>Oblea:</strong> {{ sw.oblea }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">Este activo no tiene switches asociados.</p>
+                {% endif %}
+
+                <!-- Historial -->
+                <h5 class="text-primary mt-4">Historial de Estado</h5>
+                {% if historial %}
+                    <ul class="list-group">
+                        {% for h in historial %}
+                            <li class="list-group-item">
+                                <strong>{{ h.get_estado_display }}</strong> - {{ h.fecha_cambio|date:"Y-m-d H:i" }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">Este activo no tiene historial registrado.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

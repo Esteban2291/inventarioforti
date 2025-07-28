@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Información General</h6>
+            </div>
+            <div class="card-body">
+                <p>Bienvenido al sistema de Inventario de Activos.</p>
+                <p>Total de activos registrados: <span class="badge bg-info">{{ total_activos }}</span></p>
+                </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

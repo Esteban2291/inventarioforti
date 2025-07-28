@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Activo{% endblock %}
+
+{% block page_title %}Eliminar Activo{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-danger">Confirmar Eliminación</h6>
+            </div>
+            <div class="card-body">
+                <p>¿Estás seguro de que quieres eliminar el activo **{{ activo.comando_region }} - {{ activo.ip_admin }}**?</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger me-2">Sí, Eliminar</button>
+                    <a href="{% url 'lista_activos' %}" class="btn btn-secondary">Cancelar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

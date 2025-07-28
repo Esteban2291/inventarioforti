@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Agregar Switch{% endblock %}
+{% block page_title %}Agregar Switch a {{ activo.titulo_abreviado }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <a href="{% url 'detalle_activo' activo.pk %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
