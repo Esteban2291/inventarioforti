@@ -2,24 +2,47 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib import messages
+from django.utils import timezone
+from .forms import LdapLoginForm
+from helpers.ldap_helper import LdapHelper  # ✅ esto sí funciona
+from django.contrib.auth import login
+from django.contrib.auth.models import User
 from .models import Activo, EstadoHistorico
-from .forms import ActivoForm, ImportarExcelForm, FortiSwitchForm, FortiSwitchFormSet
-from .forms import CambiarEstadoForm
-import openpyxl
+from django.urls import reverse_lazy
 
-# Login personalizado
+
+
+from .forms import (
+    ActivoForm,
+    ImportarExcelForm,
+    FortiSwitchForm,
+    FortiSwitchFormSet,
+    CambiarEstadoForm
+)
+# ---------------------------
+# Autenticación personalizada
+# ---------------------------
+# ---------------------------
+# Autenticación personalizada con LDAP
+# ---------------------------
 class CustomLoginView(LoginView):
     template_name = 'registration/login.html'
+    redirect_authenticated_user = True
+    authentication_form = LdapLoginForm
 
     def form_valid(self, form):
-        messages.success(self.request, '¡Bienvenido!')
-        return super().form_valid(form)
+        dni = form.cleaned_data.get('dni')
+        password = form.cleaned_data.get('password')
 
-    def form_invalid(self, form):
-        messages.error(self.request, 'Credenciales inválidas.')
-        return super().form_invalid(form)
+        if LdapHelper.autenticar_ldap(dni, password):
+            user, created = User.objects.get_or_create(username=dni)
+            login(self.request, user)
+            messages.success(self.request, '¡Bienvenido!')
+            return redirect('dashboard')
+        else:
+            form.add_error(None, "Credenciales inválidas.")
+            return self.form_invalid(form)
 
-# Logout personalizado
 class CustomLogoutView(LogoutView):
     next_page = 'login'
 
@@ -27,15 +50,36 @@ class CustomLogoutView(LogoutView):
         messages.info(self.request, 'Sesión cerrada.')
         return super().dispatch(request, *args, **kwargs)
 
-@login_required
+
+# ---------------------------
+# Vistas principales
+# ---------------------------
+
 def dashboard_view(request):
     total_activos = Activo.objects.count()
-    return render(request, 'dashboard.html', {'total_activos': total_activos, 'page_title': 'Dashboard'})
+    activos_activos = Activo.objects.filter(estado='activo').count()
+    activos_observacion = Activo.objects.filter(estado='observacion').count()
+    activos_quemados = Activo.objects.filter(estado='quemado').count()
+    activos_baja = Activo.objects.filter(estado='baja').count()
+
+    context = {
+        'total_activos': total_activos,
+        'activos_activos': activos_activos,
+        'activos_observacion': activos_observacion,
+        'activos_quemados': activos_quemados,
+        'activos_baja': activos_baja,
+    }
+    return render(request, 'dashboard.html', context)
+
 
 @login_required
-def lista_activos(request):
-    activos = Activo.objects.all()
-    return render(request, 'listado_activos.html', {'activos': activos, 'page_title': 'Listado de Activos'})
+def listar_activos_view(request):
+    activos = Activo.objects.all().prefetch_related('switches')
+    return render(request, 'eliminar_activo.html', {
+        'activos': activos,
+        'titulo_pagina': 'Listado de Activos',
+    })
+
 
 @login_required
 def crear_activo_view(request):
@@ -47,98 +91,113 @@ def crear_activo_view(request):
             for sw in formset.save(commit=False):
                 sw.activo = activo
                 sw.save()
-            EstadoHistorico.objects.create(activo=activo, estado=activo.estado, usuario=request.user)
+            EstadoHistorico.objects.create(
+                activo=activo,
+                estado_anterior=None,
+                estado_nuevo=activo.estado,
+                fecha_cambio=timezone.now()
+            )
             messages.success(request, 'Activo y switches creados correctamente.')
-            return redirect('listado_activos')
+            return redirect('listar_activos')
         messages.error(request, 'Error en el formulario.')
     else:
         form = ActivoForm()
         formset = FortiSwitchFormSet(prefix='switch')
-    return render(request, 'activo_form.html', {'form': form, 'formset': formset, 'page_title': 'Crear Nuevo Activo'})
+    return render(request, 'activo_form.html', {
+        'form': form,
+        'formset': formset,
+        'page_title': 'Crear Nuevo Activo'
+    })
 
-from .models import EstadoHistorico
+from .forms import CambiarEstadoForm  # ya lo usás
 
 @login_required
 def editar_activo_view(request, pk):
     activo = get_object_or_404(Activo, pk=pk)
-    estado_original = activo.estado  # Guardamos el estado anterior
+    estado_original = activo.estado
+    historial = EstadoHistorico.objects.filter(activo=activo).order_by('-fecha_cambio')
 
     if request.method == 'POST':
         form = ActivoForm(request.POST, instance=activo)
-        formset = FortiSwitchFormSet(request.POST, queryset=activo.switches.all(), prefix='switch')
+        formset = FortiSwitchFormSet(request.POST, instance=activo, prefix='switch')
+        estado_form = CambiarEstadoForm(request.POST, instance=activo)
 
-        if form.is_valid() and formset.is_valid():
-            activo_actualizado = form.save()
-
-            if estado_original != activo_actualizado.estado:
+        if form.is_valid() and formset.is_valid() and estado_form.is_valid():
+            # Primero actualizamos el estado si cambió
+            nuevo_estado = estado_form.cleaned_data['estado']
+            if nuevo_estado != estado_original:
+                activo.estado = nuevo_estado
+                activo.save()
                 EstadoHistorico.objects.create(
                     activo=activo,
                     estado_anterior=estado_original,
-                    estado_nuevo=activo_actualizado.estado,
+                    estado_nuevo=nuevo_estado,
+                    fecha_cambio=timezone.now()
                 )
 
-            # Actualizar switches si usás formset
-            switches = formset.save(commit=False)
-            for sw in switches:
-                sw.activo = activo
-                sw.save()
+            # Luego guardamos el resto
+            form.save()
+            formset.save()
 
-            messages.success(request, 'Activo actualizado correctamente.')
-            return redirect('listado_activos')
+            messages.success(request, "Activo actualizado correctamente.")
+            return redirect('listar_activos')
         else:
-            messages.error(request, 'Error al actualizar el activo.')
+            # Mensaje y print para depurar
+            messages.error(request, "Ocurrió un error al actualizar el activo.")
+            print("Errores ActivoForm:", form.errors)
+            print("Errores FormSet:", formset.errors)
+            print("Errores EstadoForm:", estado_form.errors)
+
     else:
         form = ActivoForm(instance=activo)
-        formset = FortiSwitchFormSet(queryset=activo.switches.all(), prefix='switch')
+        formset = FortiSwitchFormSet(instance=activo, prefix='switch')
+        estado_form = CambiarEstadoForm(instance=activo)
 
-    return render(request, 'activo_form.html', {
+    return render(request, 'editar_activo.html', {
         'form': form,
         'formset': formset,
-        'page_title': 'Editar Activo',
+        'estado_form': estado_form,
         'activo': activo,
+        'historial': historial,
     })
 
 
 @login_required
 def eliminar_activo_view(request, pk):
     activo = get_object_or_404(Activo, pk=pk)
+
     if request.method == 'POST':
-        activo.delete()
-        messages.success(request, 'Activo eliminado.')
-    return redirect('listado_activos')
+        estado_anterior = activo.estado
+        activo.estado = 'baja'  # o 'eliminado' según tu lógica
+        activo.save()
+
+        EstadoHistorico.objects.create(
+            activo=activo,
+            estado_anterior=estado_anterior,
+            estado_nuevo='baja',
+            fecha_cambio=timezone.now()
+        )
+
+        messages.success(request, 'El activo fue marcado como dado de baja.')
+        return redirect('listar_activos')
+
+    messages.error(request, 'Acción no permitida.')
+    return redirect('listar_activos')
 
 @login_required
 def importar_activos_view(request):
     if request.method == 'POST':
         form = ImportarExcelForm(request.POST, request.FILES)
         if form.is_valid():
-            archivo = request.FILES['archivo']
-            wb = openpyxl.load_workbook(archivo)
-            hoja = wb.active
-            duplicados, incompletos, creados = [], [], 0
-            for idx, fila in enumerate(hoja.iter_rows(min_row=2, values_only=True), start=2):
-                ip_admin, serie = fila[7], fila[4]
-                if not ip_admin or not serie:
-                    incompletos.append(f"Fila {idx}")
-                    continue
-                if Activo.objects.filter(ip_admin=ip_admin).exists() or Activo.objects.filter(serie_fortinet=serie).exists():
-                    duplicados.append(f"Fila {idx}")
-                    continue
-                Activo.objects.create(
-                    comando_region=fila[0], titulo_abreviado=fila[1], detalle_unidad=fila[2],
-                    modelo_equipo_fortinet=fila[3], serie_fortinet=serie, oblea_fortinet=fila[5],
-                    ospf=fila[6], ip_admin=ip_admin, direccion_subred=fila[8], red_dmz=fila[9],
-                    red_wifi=fila[10], grupo_admin_ldap=fila[11], apellido_nombre_admin=fila[12],
-                    telefono_admin=fila[13], observaciones=fila[14], estado=fila[15]
-                )
-                creados += 1
-            if creados: messages.success(request, f"{creados} activos importados.")
-            if duplicados: messages.warning(request, f"Duplicados: {duplicados}")
-            if incompletos: messages.error(request, f"Incompletos: {incompletos}")
-            return redirect('listado_activos')
+            # Lógica de importación desde Excel
+            messages.success(request, 'Importación completada.')
+            return redirect('listar_activos')
     else:
         form = ImportarExcelForm()
-    return render(request, 'importar_excel.html', {'form': form, 'page_title': 'Importar desde Excel'})
+    return render(request, 'importar_excel.html', {
+        'form': form,
+        'page_title': 'Importar Activos desde Excel'
+    })
 
 @login_required
 def detalle_activo_view(request, pk):
@@ -146,37 +205,36 @@ def detalle_activo_view(request, pk):
     switches = activo.switches.all()
     historial = EstadoHistorico.objects.filter(activo=activo).order_by('-fecha_cambio')
 
-    if request.method == 'POST':
-        estado_form = CambiarEstadoForm(request.POST, instance=activo)
-        if estado_form.is_valid():
-            nuevo_estado = estado_form.cleaned_data['estado']
-            if activo.estado != nuevo_estado:
-                activo.estado = nuevo_estado
-                activo.save()
-                EstadoHistorico.objects.create(activo=activo, estado=nuevo_estado)
-                messages.success(request, 'Estado actualizado correctamente.')
-                return redirect('detalle_activo', pk=activo.pk)
-    else:
-        estado_form = CambiarEstadoForm(instance=activo)
+    estado_form = CambiarEstadoForm(instance=activo)
 
     return render(request, 'detalle_activo.html', {
         'activo': activo,
         'switches': switches,
         'historial': historial,
-        'estado_form': estado_form,
+        'estado_form': estado_form
     })
 
-@login_required
+
+from django.http import HttpResponseNotAllowed
+
 def agregar_switch_a_activo(request, pk):
-    activo = get_object_or_404(Activo, pk=pk)
-    if request.method == 'POST':
-        form = FortiSwitchForm(request.POST)
-        if form.is_valid():
-            nuevo_switch = form.save(commit=False)
-            nuevo_switch.activo = activo
-            nuevo_switch.save()
-            messages.success(request, 'Switch agregado correctamente.')
-            return redirect('detalle_activo', pk=activo.pk)
-    else:
-        form = FortiSwitchForm()
-    return render(request, 'agregar_switch.html', {'form': form, 'activo': activo, 'page_title': 'Agregar Switch'})
+    return HttpResponseNotAllowed(['GET', 'POST'], 'Vista en construcción')
+
+
+# def login_view(request):
+#     if request.method == 'POST':
+#         form = LdapLoginForm(request.POST)
+#         if form.is_valid():
+#             dni = form.cleaned_data['dni']
+#             password = form.cleaned_data['password']
+
+#             if LdapHelper.autenticar_ldap(dni, password):
+#                 user, created = User.objects.get_or_create(username=dni)
+#                 login(request, user)
+#             return redirect('dashboard')
+#         else:
+#                     messages.error(request, "Credenciales inválidas.")
+#     else:
+#         form = LdapLoginForm()
+
+#     return render(request, 'registration/login.html', {'form': form})

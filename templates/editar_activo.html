@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Editar Activo{% endblock %}
+{% block page_title %}Editar Activo{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Modificar Datos del Activo</h6>
+                <a href="{% url 'listar_activos' %}" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Volver al Listado
+                </a>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+
+                    <hr>
+                    <h5 class="text-primary">Switches Fortinet Asociados</h5>
+
+                    <div id="formset-switches">
+                        {{ formset.management_form }}
+                        {% for form in formset %}
+                        {{ form.id }}  {# Campo oculto necesario para mantener la edición correcta #}
+                        <div class="switch-form mb-3 border p-3 rounded bg-light position-relative" data-index="{{ forloop.counter0 }}">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.modelo_equipo.label_tag }}
+                                    {{ form.modelo_equipo }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.serie.label_tag }}
+                                    {{ form.serie }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.oblea.label_tag }}
+                                    {{ form.oblea }}
+                                </div>
+                            </div>
+
+                            {% if not form.instance.pk %}
+                                <button type="button" class="btn btn-outline-danger btn-sm mt-2 remove-switch">
+                                    <i class="bi bi-x-circle"></i> Eliminar este Switch
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+
+                    </div>
+
+                    <button type="button" class="btn btn-success btn-sm mb-3" id="add-switch">
+                        <i class="bi bi-plus-circle"></i> Agregar otro Switch
+                    </button>
+                    <hr>
+                    <h5 class="text-primary">Cambiar Estado</h5>
+                    <div class="row align-items-end mb-3">
+                        <div class="col-md-6">
+                            {{ estado_form.estado.label_tag }}
+                            {{ estado_form.estado }}
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                        <a href="{% url 'listar_activos' %}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+            {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Errores en el formulario principal:</strong>
+                    {{ form.errors }}
+                </div>
+            {% endif %}
+            {% if formset.non_form_errors %}
+                <div class="alert alert-danger">
+                    <strong>Errores en el conjunto de switches:</strong>
+                    {{ formset.non_form_errors }}
+                </div>
+            {% endif %}
+            {% for form in formset %}
+                {% if form.errors %}
+                    <div class="alert alert-warning">
+                        <strong>Errores en switch:</strong> {{ form.errors }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+            {% if estado_form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Errores en el formulario de estado:</strong>
+                    {{ estado_form.errors }}
+                </div>
+            {% endif %}
+
+                    </div>
+                </div>
+            <h5 class="text-primary mt-4">Historial de Estado</h5>
+            {% if historial %}
+                <ul class="list-group">
+                    {% for h in historial %}
+                        <li class="list-group-item">
+                            <strong>{{ h.get_estado_display }}</strong> - {{ h.fecha_cambio|date:"Y-m-d H:i" }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">Este activo no tiene historial registrado.</p>
+            {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const addButton = document.getElementById('add-switch');
+    const formContainer = document.getElementById('formset-switches');
+    const totalForms = document.querySelector('#id_switch-TOTAL_FORMS');
+
+    addButton.addEventListener('click', function () {
+        const formCount = parseInt(totalForms.value);
+        const firstForm = document.querySelector('.switch-form');
+
+        // Clonamos profundamente
+        const newForm = firstForm.cloneNode(true);
+
+        // Actualizamos atributos de inputs, labels, etc.
+        newForm.querySelectorAll('input, select, textarea, label').forEach(el => {
+            if (el.hasAttribute('name')) {
+                el.setAttribute('name', el.getAttribute('name').replace(/switch-\d+-/, `switch-${formCount}-`));
+            }
+            if (el.hasAttribute('id')) {
+                el.setAttribute('id', el.getAttribute('id').replace(/switch-\d+-/, `switch-${formCount}-`));
+            }
+            if (el.tagName === 'LABEL' && el.hasAttribute('for')) {
+                el.setAttribute('for', el.getAttribute('for').replace(/switch-\d+-/, `switch-${formCount}-`));
+            }
+            // Limpiar valor si no es campo oculto (como el id)
+            if (el.tagName !== 'LABEL' && el.type !== 'hidden') {
+                el.value = '';
+            }
+        });
+
+        // Eliminar botones existentes y agregar nuevo botón de eliminar
+        newForm.querySelectorAll('.remove-switch').forEach(b => b.remove());
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'btn btn-outline-danger btn-sm mt-2 remove-switch';
+        deleteButton.innerHTML = '<i class="bi bi-x-circle"></i> Eliminar este Switch';
+        deleteButton.type = 'button';
+        newForm.appendChild(deleteButton);
+
+        formContainer.appendChild(newForm);
+        totalForms.value = formCount + 1;
+    });
+
+    // Eliminar switch
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-switch')) {
+            const allForms = document.querySelectorAll('.switch-form');
+            if (allForms.length > 1) {
+                const btn = e.target.closest('.remove-switch');
+                const formToRemove = btn.closest('.switch-form');
+                formToRemove.remove();
+
+                // Reindexar formularios
+                const forms = document.querySelectorAll('.switch-form');
+                forms.forEach((formEl, index) => {
+                    formEl.querySelectorAll('input, select, textarea, label').forEach(el => {
+                        if (el.hasAttribute('name')) {
+                            el.setAttribute('name', el.getAttribute('name').replace(/switch-\d+-/, `switch-${index}-`));
+                        }
+                        if (el.hasAttribute('id')) {
+                            el.setAttribute('id', el.getAttribute('id').replace(/switch-\d+-/, `switch-${index}-`));
+                        }
+                        if (el.tagName === 'LABEL' && el.hasAttribute('for')) {
+                            el.setAttribute('for', el.getAttribute('for').replace(/switch-\d+-/, `switch-${index}-`));
+                        }
+                    });
+                    formEl.setAttribute('data-index', index);
+                });
+
+                totalForms.value = forms.length;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+

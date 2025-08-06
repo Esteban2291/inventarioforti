@@ -14,33 +14,29 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-bordered table-striped" id="dataTable" width="100%" cellspacing="0">
-                        <thead>
+                    <table class="table table-bordered table-striped table-hover" id="dataTable" width="100%">
+                        <thead class="table-primary">
                             <tr>
-                                <th>Comando / Región</th>
-                                <th>Título Abreviado</th>
-                                <th>Datos Fortinet</th>
+                                <th>Unidad</th>
+                                <th>Equipo Fortinet</th>
                                 <th>Switch(es)</th>
+                                <th>Red</th>
+                                <th>Administrador</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
-
                         <tbody>
                             {% for activo in activos %}
                             <tr>
-                                <td>{{ activo.comando_region }}</td>
-                                <td>{{ activo.titulo_abreviado }}</td>
+                                <td>
+                                    <strong>Región:</strong> {{ activo.comando_region }}<br>
+                                    <strong>Unidad:</strong> {{ activo.titulo_abreviado }}
+                                </td>
                                 <td>
                                     <strong>Modelo:</strong> {{ activo.modelo_equipo_fortinet }}<br>
                                     <strong>Serie:</strong> {{ activo.serie_fortinet }}<br>
-                                    <strong>Oblea:</strong> {{ activo.oblea_fortinet }}<br>
-                                    <strong>OSPF:</strong> {{ activo.ospf }}<br>
-                                    <strong>IP Admin:</strong> {{ activo.ip_admin }}<br>
-                                    <strong>Subred:</strong> {{ activo.direccion_subred }}<br>
-                                    <strong>Red DMZ:</strong> {{ activo.red_dmz }}<br>
-                                    <strong>Red WiFi:</strong> {{ activo.red_wifi }}<br>
-                                    <strong>LDAP:</strong> {{ activo.grupo_admin_ldap }}
+                                    <strong>Oblea:</strong> {{ activo.oblea_fortinet }}
                                 </td>
                                 <td>
                                     {% if activo.switches.exists %}
@@ -58,6 +54,18 @@
                                     {% endif %}
                                 </td>
                                 <td>
+                                    <strong>IP:</strong> {{ activo.ip_admin }}<br>
+                                    <strong>OSPF:</strong> {{ activo.ospf }}<br>
+                                    <strong>Subred:</strong> {{ activo.direccion_subred }}<br>
+                                    <strong>DMZ:</strong> {{ activo.red_dmz }}<br>
+                                    <strong>WiFi:</strong> {{ activo.red_wifi }}
+                                </td>
+                                <td>
+                                    <strong>Nombre:</strong> {{ activo.apellido_nombre_admin }}<br>
+                                    <strong>Tel:</strong> {{ activo.telefono_admin }}<br>
+                                    <strong>LDAP:</strong> {{ activo.grupo_admin_ldap }}
+                                </td>
+                                <td>
                                     {% if activo.estado == 'activo' %}
                                         <span class="badge bg-success">Activo</span>
                                     {% elif activo.estado == 'observacion' %}
@@ -65,30 +73,24 @@
                                     {% elif activo.estado == 'quemado' %}
                                         <span class="badge bg-danger">Quemado</span>
                                     {% elif activo.estado == 'baja' %}
-                                        <span class="badge bg-secondary">Dado de baja</span>
+                                        <span class="badge bg-secondary">Baja</span>
                                     {% else %}
                                         <span class="badge bg-light text-dark">Sin estado</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-center">
-                                    <div class="btn-group-vertical" role="group" aria-label="Acciones">
-                                        <a href="{% url 'editar_activo' activo.pk %}" class="btn btn-info btn-sm mb-1" title="Editar">
+                                    <div class="btn-group-vertical" role="group">
+                                        <a href="{% url 'editar_activo' activo.pk %}" class="btn btn-info btn-sm mb-1">
                                             <i class="bi bi-pencil-square"></i> Editar
                                         </a>
-                                        <button type="button" class="btn btn-danger btn-sm mb-1" title="Eliminar"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#modalEliminar"
-                                                data-url="{% url 'eliminar_activo' activo.pk %}">
+                                        <button type="button" class="btn btn-danger btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#modalEliminar" data-url="{% url 'eliminar_activo' activo.pk %}">
                                             <i class="bi bi-trash-fill"></i> Eliminar
                                         </button>
-                                        <a href="{% url 'detalle_activo' activo.pk %}" class="btn btn-secondary btn-sm" title="Ver Detalle">
-                                            <i class="bi bi-eye-fill"></i> Ver
-                                        </a>
                                     </div>
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="6" class="text-center">No hay activos registrados.</td></tr>
+                            <tr><td colspan="7" class="text-center">No hay activos registrados.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -98,7 +100,7 @@
     </div>
 </div>
 
-<!-- Modal de Confirmación de Eliminación -->
+<!-- Modal de Eliminación -->
 <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">

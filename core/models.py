@@ -11,7 +11,7 @@ class Activo(models.Model):
     ]
 
     # Datos del Equipo (Fortinet)
-    comando_region = models.CharField(max_length=100, verbose_name="Comando / Región")
+    comando_region = models.CharField(max_length=100, verbose_name="Región")
     titulo_abreviado = models.CharField(max_length=50, verbose_name="Título Abreviado")
     detalle_unidad = models.CharField(max_length=200, verbose_name="Detalle de la Unidad", blank=True, null=True)
     modelo_equipo_fortinet = models.CharField(max_length=100, verbose_name="Modelo Equipo (Fortinet)")
@@ -50,7 +50,6 @@ class Activo(models.Model):
 
     def __str__(self):
         return f"{self.comando_region} - {self.ip_admin}"
-
 
 # models.py
 class FortiSwitch(models.Model):

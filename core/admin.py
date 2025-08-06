@@ -23,10 +23,6 @@ class ActivoAdmin(admin.ModelAdmin):
         ('Datos de Red', {
             'fields': ('ospf', 'ip_admin', 'direccion_subred', 'red_dmz', 'red_wifi')
         }),
-        ('Datos del Switch (Fortinet)', {
-            'fields': ('modelo_equipo_switch', 'serie_switch', 'oblea_switch'),
-            'classes': ('collapse',), # Esto lo hace colapsable en el admin
-        }),
         ('Datos Administrador de Unidad', {
             'fields': ('grupo_admin_ldap', 'apellido_nombre_admin', 'telefono_admin')
         }),
@@ -34,5 +30,4 @@ class ActivoAdmin(admin.ModelAdmin):
             'fields': ('observaciones',),
         }),
     )
-
 admin.site.register(Activo, ActivoAdmin)

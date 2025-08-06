@@ -2,8 +2,7 @@ from django import forms
 from .models import Activo, FortiSwitch
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column
-from django.forms import modelformset_factory
-
+from django.forms import inlineformset_factory
 
 # Formulario para Activo
 class ActivoForm(forms.ModelForm):
@@ -16,7 +15,6 @@ class ActivoForm(forms.ModelForm):
             'grupo_admin_ldap', 'apellido_nombre_admin', 'telefono_admin',
             'observaciones',
         ]
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -48,8 +46,6 @@ class ActivoForm(forms.ModelForm):
             'observaciones',
             Submit('submit', 'Guardar Activo', css_class='btn btn-primary mt-3')
         )
-
-
 # Formulario para FortiSwitch
 class FortiSwitchForm(forms.ModelForm):
     MODELO_CHOICES = [
@@ -70,20 +66,18 @@ class FortiSwitchForm(forms.ModelForm):
             'serie': forms.TextInput(attrs={'class': 'form-control'}),
             'oblea': forms.TextInput(attrs={'class': 'form-control'}),
         }
-
-
-# Formulario para importar Excel
-class ImportarExcelForm(forms.Form):
-    archivo = forms.FileField(label="Seleccionar archivo Excel (.xlsx)")
-
-
-# FormSet para Switches asociados a un Activo
-FortiSwitchFormSet = modelformset_factory(
+# ✅ FormSet vinculado al Activo (clave)
+FortiSwitchFormSet = inlineformset_factory(
+    Activo,
     FortiSwitch,
     form=FortiSwitchForm,
     extra=1,
-    can_delete=False
+    can_delete=True
 )
+
+class ImportarExcelForm(forms.Form):
+    archivo = forms.FileField(label="Seleccionar archivo Excel (.xlsx)")
+
 
 class CambiarEstadoForm(forms.ModelForm):
     class Meta:
@@ -92,3 +86,9 @@ class CambiarEstadoForm(forms.ModelForm):
         widgets = {
             'estado': forms.Select(attrs={'class': 'form-select'}),
         }
+
+
+#Este formulario se usará en la vista login_view para capturar el DNI y la contraseña del usuario y autenticarlos vía LDAP.
+class LdapLoginForm(forms.Form):
+    dni = forms.CharField(label="DNI", max_length=15)
+    password = forms.CharField(widget=forms.PasswordInput(), label="Contraseña")
