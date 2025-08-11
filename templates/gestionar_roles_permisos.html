@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Roles y Permisos{% endblock %}
+
+{% block content %}
+<h2>Roles y Permisos</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Rol</th>
+            <th>Permisos</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for rol in roles %}
+        <tr>
+            <td>{{ rol.name }}</td>
+            <td>
+                <ul>
+                    {% for perm in rol.permissions.all %}
+                        <li>{{ perm.name }}</li>
+                    {% empty %}
+                        <li>Sin permisos</li>
+                    {% endfor %}
+                </ul>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Gestionar usuarios{% endblock %}
+{% block page_title %}Gestionar usuarios{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <div class="card shadow mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-primary">Usuarios y Roles</h6>
+        <a class="btn btn-outline-primary btn-sm" href="{% url 'gestionar_roles_permisos' %}">
+          <i class="bi bi-shield-lock"></i> Ver roles y permisos
+        </a>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info">
+          <strong>Roles disponibles:</strong> <code>administrador</code> (todos los permisos) y
+          <code>operador</code> (solo lectura). 
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Usuario</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th class="text-center">Rol actual</th>
+                <th class="text-center">Cambiar rol</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+              <tr>
+                <td>@{{ row.user.username }}</td>
+                <td>{{ row.user.get_full_name|default:row.user.username }}</td>
+                <td>{{ row.user.email|default:"-" }}</td>
+                <td class="text-center">
+                  {% if row.current_role %}
+                    <span class="badge bg-success">{{ row.current_role }}</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Sin rol</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <form method="post" class="d-flex gap-2 justify-content-center">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ row.user.id }}">
+                    <select name="role" class="form-select form-select-sm" style="max-width: 220px;">
+                      <option value="">— Sin rol —</option>
+                      <option value="administrador" {% if row.current_role == 'administrador' %}selected{% endif %}>
+                        administrador
+                      </option>
+                      <option value="operador" {% if row.current_role == 'operador' %}selected{% endif %}>
+                        operador
+                      </option>
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                      Guardar
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center">No hay usuarios.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
