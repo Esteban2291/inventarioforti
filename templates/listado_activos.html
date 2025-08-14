@@ -6,13 +6,93 @@
 <div class="row">
     <div class="col-md-12">
         <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary">Activos Registrados</h6>
-                <a href="{% url 'crear_activo' %}" class="btn btn-success btn-sm">
-                    <i class="bi bi-plus-circle-fill me-1"></i> Añadir Nuevo Activo
-                </a>
-            </div>
+            <div class="card-header py-3">
+  <div class="d-flex align-items-center justify-content-between gap-2">
+    <h6 class="m-0 fw-bold text-primary">Activos Registrados</h6>
+
+    <div class="d-flex align-items-center gap-2">
+      {% with qs=request.GET.urlencode %}
+      <div class="btn-group">
+        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-download me-1"></i> Exportar
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item"
+               href="{% url 'exportar_activos_excel' %}{% if qs %}?{{ qs }}{% endif %}">
+              Excel (.xlsx)
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item"
+               href="{% url 'exportar_activos_pdf' %}{% if qs %}?{{ qs }}{% endif %}">
+              PDF (.pdf)
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% endwith %}
+
+      <a href="{% url 'crear_activo' %}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-circle-fill me-1"></i> Añadir Nuevo Activo
+      </a>
+    </div>
+  </div>
+</div>
+
             <div class="card-body">
+                {# Filtros por estado #}
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                <a href="{% url 'listar_activos' %}" class="btn btn-outline-secondary btn-sm {% if not filtro_estado %}active{% endif %}">
+                    Todos <span class="badge bg-secondary ms-1">{{ counters.total|default:0 }}</span>
+                </a>
+                <a href="{% url 'listar_activos' %}?estado=activo" class="btn btn-outline-success btn-sm {% if filtro_estado == 'activo' %}active{% endif %}">
+                    Activo <span class="badge bg-success ms-1">{{ counters.activos|default:0 }}</span>
+                </a>
+                <a href="{% url 'listar_activos' %}?estado=observacion" class="btn btn-outline-warning btn-sm {% if filtro_estado == 'observacion' %}active{% endif %}">
+                    Observación <span class="badge bg-warning text-dark ms-1">{{ counters.obs|default:0 }}</span>
+                </a>
+                <a href="{% url 'listar_activos' %}?estado=quemado" class="btn btn-outline-danger btn-sm {% if filtro_estado == 'quemado' %}active{% endif %}">
+                    Quemado <span class="badge bg-danger ms-1">{{ counters.quem|default:0 }}</span>
+                </a>
+                <a href="{% url 'listar_activos' %}?estado=baja" class="btn btn-outline-dark btn-sm {% if filtro_estado == 'baja' %}active{% endif %}">
+                    Baja <span class="badge bg-dark ms-1">{{ counters.baja|default:0 }}</span>
+                </a>
+                </div>
+
+                {# Aviso de filtro aplicado (opcional) #}
+                {% if filtro_estado %}
+                <div class="alert alert-info py-2">
+                    Mostrando activos con estado: <strong>{{ filtro_estado }}</strong>.
+                    <a href="{% url 'listar_activos' %}" class="ms-2">Quitar filtro</a>
+                </div>
+                {% endif %}
+
+                {# Buscador #}
+                <form method="get" class="row g-2 align-items-center mb-3">
+                {# preserva el filtro por estado si está activo #}
+                {% if filtro_estado %}
+                    <input type="hidden" name="estado" value="{{ filtro_estado }}">
+                {% endif %}
+
+                <div class="col-sm-8 col-md-6 col-lg-5">
+                    <input type="text"
+                        name="q"
+                        value="{{ q|default:'' }}"
+                        class="form-control"
+                        placeholder="Buscar por serie, unidad, oblea, IP, admin...">
+                </div>
+
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">Buscar</button>
+                    {% if q %}
+                    <a href="{% url 'listar_activos' %}{% if filtro_estado %}?estado={{ filtro_estado }}{% endif %}"
+                        class="btn btn-outline-secondary btn-sm">Limpiar</a>
+                    {% endif %}
+                </div>
+                </form>
+
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped table-hover" id="dataTable" width="100%">
                         <thead class="table-primary">
@@ -80,11 +160,16 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group-vertical" role="group">
-                                        <a href="{% url 'editar_activo' activo.pk %}" class="btn btn-info btn-sm mb-1">
-                                            <i class="bi bi-pencil-square"></i> Editar
+                                        <a href="{% url 'detalle_activo' activo.pk %}" class="btn btn-primary btn-sm mb-1">
+                                        <i class="bi bi-eye-fill"></i> Ver
                                         </a>
-                                        <button type="button" class="btn btn-danger btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#modalEliminar" data-url="{% url 'eliminar_activo' activo.pk %}">
-                                            <i class="bi bi-trash-fill"></i> Eliminar
+                                        <a href="{% url 'editar_activo' activo.pk %}" class="btn btn-info btn-sm mb-1">
+                                        <i class="bi bi-pencil-square"></i> Editar
+                                        </a>
+                                        <button type="button" class="btn btn-danger btn-sm mb-1"
+                                                data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                                data-url="{% url 'eliminar_activo' activo.pk %}">
+                                        <i class="bi bi-trash-fill"></i> Eliminar
                                         </button>
                                     </div>
                                 </td>

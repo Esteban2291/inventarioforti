@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte de Activos</title>
+  <style>
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; }
+    h1 { font-size: 18px; margin: 0 0 6px 0; }
+    .muted { color: #666; font-size: 11px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #ccc; padding: 6px; vertical-align: top; }
+    th { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>Reporte de Activos</h1>
+  <div class="muted">
+    Generado: {{ generado|date:"d/m/Y H:i" }}
+    {% if filtro_estado %} | Estado: {{ filtro_estado }}{% endif %}
+    {% if q %} | Búsqueda: “{{ q }}”{% endif %}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Región / Unidad</th>
+        <th>Fortinet</th>
+        <th>Switches</th>
+        <th>Redes</th>
+        <th>Admin</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for a in activos %}
+      <tr>
+        <td>
+          <strong>Región:</strong> {{ a.comando_region }}<br>
+          <strong>Unidad:</strong> {{ a.titulo_abreviado }}
+        </td>
+        <td>
+          <strong>Modelo:</strong> {{ a.modelo_equipo_fortinet }}<br>
+          <strong>Serie:</strong> {{ a.serie_fortinet }}<br>
+          <strong>Oblea:</strong> {{ a.oblea_fortinet }}
+        </td>
+        <td>
+          {% if a.switches.exists %}
+            <ul style="margin:0; padding-left:16px;">
+              {% for sw in a.switches.all %}
+                <li>{{ sw.modelo_equipo }} / {{ sw.serie }} / {{ sw.oblea|default:"-" }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            Sin switches
+          {% endif %}
+        </td>
+        <td>
+          <strong>IP:</strong> {{ a.ip_admin }}<br>
+          <strong>OSPF:</strong> {{ a.ospf }}<br>
+          <strong>Subred:</strong> {{ a.direccion_subred }}<br>
+          <strong>DMZ:</strong> {{ a.red_dmz }}<br>
+          <strong>WiFi:</strong> {{ a.red_wifi }}
+        </td>
+        <td>
+          {{ a.apellido_nombre_admin }}<br>
+          <span class="muted">{{ a.telefono_admin }} | {{ a.grupo_admin_ldap }}</span>
+        </td>
+        <td>{{ a.estado }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" style="text-align:center;">Sin datos</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

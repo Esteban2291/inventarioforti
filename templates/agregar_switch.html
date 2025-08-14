@@ -4,13 +4,20 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-body">
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-success">Guardar</button>
-            <a href="{% url 'detalle_activo' activo.pk %}" class="btn btn-secondary">Cancelar</a>
-        </form>
-    </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      {{ form.as_p }}
+
+      <button type="submit" class="btn btn-success">Guardar</button>
+      <a href="{% url 'detalle_activo' activo.pk %}" class="btn btn-secondary">Cancelar</a>
+      <a href="{% url 'listar_activos' %}" class="btn btn-outline-primary">Volver a la lista</a>
+    </form>
+  </div>
 </div>
 {% endblock %}

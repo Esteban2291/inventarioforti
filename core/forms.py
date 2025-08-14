@@ -47,6 +47,17 @@ class ActivoForm(forms.ModelForm):
             Submit('submit', 'Guardar Activo', css_class='btn btn-primary mt-3')
         )
 # Formulario para FortiSwitch
+# core/forms.py
+from django import forms
+from .models import Activo, FortiSwitch
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Submit, Row, Column
+from django.forms import inlineformset_factory
+
+class ActivoForm(forms.ModelForm):
+    # ... (tal como lo tenés)
+    pass
+
 class FortiSwitchForm(forms.ModelForm):
     MODELO_CHOICES = [
         ('FortiSwitch 224E', 'FortiSwitch 224E'),
@@ -59,36 +70,41 @@ class FortiSwitchForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
+    def __init__(self, *args, **kwargs):
+        self.activo = kwargs.pop('activo', None)  # <- clave para validar por activo
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = FortiSwitch
         fields = ['modelo_equipo', 'serie', 'oblea']
         widgets = {
-            'serie': forms.TextInput(attrs={'class': 'form-control'}),
-            'oblea': forms.TextInput(attrs={'class': 'form-control'}),
+            'serie': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'N° de serie'}),
+            'oblea': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Oblea (opcional)'}),
         }
-# ✅ FormSet vinculado al Activo (clave)
+
+    def clean_serie(self):
+        serie = (self.cleaned_data.get('serie') or '').strip()
+        if self.activo and serie:
+            ya_existe = FortiSwitch.objects.filter(activo=self.activo, serie__iexact=serie).exists()
+            if ya_existe:
+                raise forms.ValidationError("Ya existe un switch con esa serie para este activo.")
+        return serie
+
+# FormSet (lo dejás igual)
 FortiSwitchFormSet = inlineformset_factory(
-    Activo,
-    FortiSwitch,
-    form=FortiSwitchForm,
-    extra=1,
-    can_delete=True
+    Activo, FortiSwitch, form=FortiSwitchForm, extra=1, can_delete=True
 )
 
 class ImportarExcelForm(forms.Form):
     archivo = forms.FileField(label="Seleccionar archivo Excel (.xlsx)")
 
-
 class CambiarEstadoForm(forms.ModelForm):
     class Meta:
         model = Activo
         fields = ['estado']
-        widgets = {
-            'estado': forms.Select(attrs={'class': 'form-select'}),
-        }
+        widgets = {'estado': forms.Select(attrs={'class': 'form-select'})}
 
-
-#Este formulario se usará en la vista login_view para capturar el DNI y la contraseña del usuario y autenticarlos vía LDAP.
 class LdapLoginForm(forms.Form):
     dni = forms.CharField(label="DNI", max_length=15)
     password = forms.CharField(widget=forms.PasswordInput(), label="Contraseña")
+

@@ -17,7 +17,7 @@
                     {{ form|crispy }}
 
                     <hr>
-                    <h5 class="text-primary">Switches Fortinet Asociados</h5>
+                    <h5 class="text-primary">Switches Fortinet</h5>
 
                     <div id="formset-switches">
                         {{ formset.management_form }}
@@ -65,52 +65,68 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const addButton = document.getElementById('add-switch');
-    const formContainer = document.getElementById('formset-switches');
-    const totalForms = document.querySelector('#id_switch-TOTAL_FORMS');
+  const addButton = document.getElementById('add-switch');
+  const formContainer = document.getElementById('formset-switches');
 
-    addButton.addEventListener('click', function () {
-        const formCount = parseInt(totalForms.value);
-        const firstForm = document.querySelector('.switch-form');
-        const newForm = firstForm.cloneNode(true);
+  // Detectar prefix dinámicamente a partir del management form
+  const totalInput = formContainer.querySelector('input[name$="-TOTAL_FORMS"]');
+  if (!addButton || !formContainer || !totalInput) return;
 
-        // Limpiar campos
-        newForm.querySelectorAll('input, select').forEach(el => el.value = '');
+  const prefix = totalInput.name.split('-')[0]; // ej: "switch"
+  const totalForms = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
 
-        // Reemplazar índices
-        newForm.innerHTML = newForm.innerHTML.replace(/switch-(\d+)-/g, `switch-${formCount}-`);
+  addButton.addEventListener('click', function () {
+    const formCount = parseInt(totalForms.value, 10);
+    const firstForm = formContainer.querySelector('.switch-form');
+    if (!firstForm) return;
 
-        // Agregar botón eliminar
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'btn btn-outline-danger btn-sm mt-2 remove-switch';
-        deleteButton.innerHTML = '<i class="bi bi-x-circle"></i> Eliminar este Switch';
-        deleteButton.type = 'button';
-        newForm.appendChild(deleteButton);
+    const newForm = firstForm.cloneNode(true);
 
-        newForm.setAttribute('data-index', formCount);
-        formContainer.appendChild(newForm);
-        totalForms.value = formCount + 1;
+    // Limpiar valores
+    newForm.querySelectorAll('input, select').forEach(el => {
+      if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
+      else el.value = '';
     });
 
-    // Evento eliminar
-    document.addEventListener('click', function (e) {
-        if (e.target.closest('.remove-switch')) {
-            const allForms = document.querySelectorAll('.switch-form');
-            if (allForms.length > 1) {
-                const btn = e.target.closest('.remove-switch');
-                const formToRemove = btn.closest('.switch-form');
-                formToRemove.remove();
+    // Actualizar índices (name/for/id) según prefix
+    const re = new RegExp(`${prefix}-(\\d+)-`, 'g');
+    newForm.innerHTML = newForm.innerHTML.replace(re, `${prefix}-${formCount}-`);
 
-                // Reindexar formularios
-                const forms = document.querySelectorAll('.switch-form');
-                forms.forEach((formEl, index) => {
-                    formEl.innerHTML = formEl.innerHTML.replace(/switch-(\d+)-/g, `switch-${index}-`);
-                    formEl.setAttribute('data-index', index);
-                });
-                totalForms.value = forms.length;
-            }
-        }
+    // Botón eliminar (si no existe)
+    if (!newForm.querySelector('.remove-switch')) {
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'btn btn-outline-danger btn-sm mt-2 remove-switch';
+      deleteButton.type = 'button';
+      deleteButton.innerHTML = '<i class="bi bi-x-circle"></i> Eliminar este Switch';
+      newForm.appendChild(deleteButton);
+    }
+
+    newForm.setAttribute('data-index', formCount);
+    formContainer.appendChild(newForm);
+    totalForms.value = formCount + 1;
+  });
+
+  // Eliminar y reindexar
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.remove-switch');
+    if (!btn) return;
+
+    const forms = formContainer.querySelectorAll('.switch-form');
+    if (forms.length <= 1) return;
+
+    btn.closest('.switch-form').remove();
+
+    // Reindexar todos
+    const currentForms = formContainer.querySelectorAll('.switch-form');
+    currentForms.forEach((formEl, idx) => {
+      const re = new RegExp(`${prefix}-(\\d+)-`, 'g');
+      formEl.innerHTML = formEl.innerHTML.replace(re, `${prefix}-${idx}-`);
+      formEl.setAttribute('data-index', idx);
     });
+    totalForms.value = currentForms.length;
+  });
 });
 </script>
+
+
 {% endblock %}

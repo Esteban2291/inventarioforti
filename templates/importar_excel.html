@@ -12,14 +12,11 @@
             </div>
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {{ form.as_p }}
-
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-upload me-1"></i> Importar Archivo
-                    </button>
-                    <a href="{% url 'listar_activos' %}" class="btn btn-secondary ms-2">Cancelar</a>
+                {% csrf_token %}
+                    <input type="file" name="archivo" accept=".xls,.xlsx" required>
+                    <button type="submit">Importar</button>
                 </form>
+                {% endblock %}
 
                 <hr class="mt-4">
                 <p class="text-muted small">
